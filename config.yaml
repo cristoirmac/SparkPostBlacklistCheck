@@ -1,0 +1,19 @@
+# SparkPost API Configuration
+sparkpost:
+  api_key: "${SPARKPOST_API_KEY}"
+  base_url: "https://api.sparkpost.com/api/v1"
+
+# MXToolbox Configuration
+mxtoolbox:
+  base_url: "https://mxtoolbox.com/api/v1"
+  check_interval: 5  # seconds between checks to respect rate limits
+
+# Notification Settings
+notifications:
+  slack_notify_on_clean: false  # Set to true to notify even when no blacklists are found
+  
+# Logging Configuration
+logging:
+  level: INFO
+  file: "blacklist_monitor.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
