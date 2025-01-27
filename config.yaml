@@ -11,7 +11,13 @@ mxtoolbox:
 # Notification Settings
 notifications:
   slack_notify_on_clean: false  # Set to true to notify even when no blacklists are found
-  
+  email:
+    enabled: true
+    notify_on_clean: false  # Set to true to notify even when no blacklists are found
+    recipients: []  # List of email addresses to notify
+    from_name: "SparkPost IP Monitor"
+    subject_prefix: "[IP Monitor]"
+
 # Logging Configuration
 logging:
   level: INFO
