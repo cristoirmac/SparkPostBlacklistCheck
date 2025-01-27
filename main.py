@@ -7,6 +7,7 @@ from logger import setup_logger
 from sparkpost_client import SparkPostClient
 from mxtoolbox_client import MXToolboxClient
 from slack_notifier import SlackNotifier
+from blacklist_store import BlacklistStore
 
 def check_ips() -> None:
     """
@@ -19,9 +20,13 @@ def check_ips() -> None:
         sparkpost = SparkPostClient(logger)
         mxtoolbox = MXToolboxClient(logger)
         slack = SlackNotifier(logger)
+        store = BlacklistStore(logger)
 
         # Get all sending IPs from SparkPost
         sending_ips = sparkpost.get_sending_ips()
+        check_results = []
+
+        logger.info(f"Starting blacklist checks for {len(sending_ips)} IPs")
 
         # Check each IP against blacklists
         for ip_info in sending_ips:
@@ -30,9 +35,28 @@ def check_ips() -> None:
 
             # Check blacklists
             check_result = mxtoolbox.check_ip_blacklist(ip)
+            check_results.append(check_result)
 
-            # Send notification if needed
-            slack.send_notification(check_result)
+            # Send individual notification if needed
+            try:
+                slack.send_notification(check_result)
+            except Exception as e:
+                logger.error(f"Error sending individual notification for IP {ip}: {str(e)}")
+
+        # Store results for historical tracking
+        try:
+            store.store_results(check_results)
+            logger.info("Successfully stored check results in database")
+        except Exception as e:
+            logger.error(f"Error storing results in database: {str(e)}")
+
+        # Send summary notification
+        try:
+            logger.info("Sending summary notification to Slack")
+            slack.send_summary(store)
+            logger.info("Successfully sent summary notification")
+        except Exception as e:
+            logger.error(f"Error sending summary notification: {str(e)}")
 
     except Exception as e:
         logger.error(f"Error in blacklist monitoring: {str(e)}")
@@ -42,11 +66,15 @@ def main() -> None:
     """
     Entry point for the script
     """
+    logger = setup_logger()
+    logger.info("Starting SparkPost IP Blacklist Monitor")
+
     # Run immediately on start
     check_ips()
 
     # Schedule daily execution
     schedule.every().day.at("00:00").do(check_ips)
+    logger.info("Scheduled daily checks for 00:00 UTC")
 
     # Keep the script running
     while True:
