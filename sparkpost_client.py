@@ -21,7 +21,7 @@ class SparkPostClient:
 
     def get_sending_ips(self) -> List[Dict[str, Any]]:
         """
-        Fetch all sending IPs from SparkPost
+        Fetch all sending IPs from SparkPost, including their IP Pool information
         """
         try:
             response = requests.get(
@@ -31,8 +31,12 @@ class SparkPostClient:
             response.raise_for_status()
 
             data = response.json()
-            # Extract just the IP addresses and relevant information
-            ips = [{'ip': ip_info['external_ip']} for ip_info in data['results']]
+            # Extract IP addresses along with their pool information
+            ips = [{
+                'ip': ip_info['external_ip'],
+                'pool': ip_info.get('ip_pool', 'default'),
+                'hostname': ip_info.get('hostname', 'N/A')
+            } for ip_info in data['results']]
 
             self.logger.info("Successfully retrieved sending IPs from SparkPost")
             return ips

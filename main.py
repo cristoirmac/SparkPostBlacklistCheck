@@ -31,14 +31,20 @@ def check_ips() -> None:
         # Check each IP against blacklists
         for ip_info in sending_ips:
             ip = ip_info['ip']
-            logger.info(f"Checking IP: {ip}")
+            pool = ip_info.get('pool', 'default')
+            hostname = ip_info.get('hostname', 'N/A')
+            logger.info(f"Checking IP: {ip} (Pool: {pool})")
 
             # Check blacklists
             check_result = mxtoolbox.check_ip_blacklist(ip)
+            # Add pool and hostname information to check result
+            check_result['pool'] = pool
+            check_result['hostname'] = hostname
             check_results.append(check_result)
 
-            # Send individual notification if needed
+            # Send individual notification
             try:
+                logger.info(f"Sending notification for IP {ip} (Pool: {pool})")
                 slack.send_notification(check_result)
             except Exception as e:
                 logger.error(f"Error sending individual notification for IP {ip}: {str(e)}")

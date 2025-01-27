@@ -22,6 +22,8 @@ class BlacklistStore:
                 CREATE TABLE IF NOT EXISTS blacklist_results (
                     run_id INTEGER,
                     ip TEXT NOT NULL,
+                    ip_pool TEXT NOT NULL DEFAULT 'default',
+                    hostname TEXT,
                     blacklist_name TEXT,
                     removal_url TEXT,
                     FOREIGN KEY (run_id) REFERENCES check_runs(id)
@@ -47,12 +49,14 @@ class BlacklistStore:
             # Store results
             for result in results:
                 ip = result['ip']
+                ip_pool = result.get('pool', 'default')
+                hostname = result.get('hostname', 'N/A')
                 for blacklist in result.get('blacklists', []):
                     cursor.execute('''
                         INSERT INTO blacklist_results 
-                        (run_id, ip, blacklist_name, removal_url)
-                        VALUES (?, ?, ?, ?)
-                    ''', (run_id, ip, blacklist['name'], blacklist['removal_url']))
+                        (run_id, ip, ip_pool, hostname, blacklist_name, removal_url)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (run_id, ip, ip_pool, hostname, blacklist['name'], blacklist['removal_url']))
 
             self.conn.commit()
             return run_id
@@ -74,18 +78,21 @@ class BlacklistStore:
 
             last_run_id = result[0]
 
-            # Get blacklisted IPs from the last run
+            # Get blacklisted IPs from the last run with pool information
             cursor.execute('''
-                SELECT DISTINCT ip, blacklist_name
+                SELECT DISTINCT ip, ip_pool, blacklist_name
                 FROM blacklist_results
                 WHERE run_id = ?
             ''', (last_run_id,))
 
             results = {}
-            for ip, blacklist in cursor.fetchall():
+            for ip, pool, blacklist in cursor.fetchall():
                 if ip not in results:
-                    results[ip] = []
-                results[ip].append(blacklist)
+                    results[ip] = {
+                        'pool': pool,
+                        'blacklists': []
+                    }
+                results[ip]['blacklists'].append(blacklist)
 
             return results
         except sqlite3.Error as e:
